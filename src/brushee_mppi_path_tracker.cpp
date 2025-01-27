@@ -9,14 +9,14 @@ BrusheeMppiPathTracker::BrusheeMppiPathTracker() : private_nh_("~")
   private_nh_.param("num_samples", num_samples_, 1000);
   private_nh_.param("control_noise", control_noise_, 0.4);
   private_nh_.param("lambda", lambda_, 1.0);
-  private_nh_.param("vx_max", vx_max_, 0.5);
-  private_nh_.param("vy_max", vy_max_, 0.5);
+  private_nh_.param("vx_max", vx_max_, 0.3);
+  private_nh_.param("vy_max", vy_max_, 0.3);
   private_nh_.param("w_max", w_max_, 1.0);
   private_nh_.param("vx_min", vx_min_, 0.0);
-  private_nh_.param("vy_min", vy_min_, -1.0);
+  private_nh_.param("vy_min", vy_min_, -0.3);
   private_nh_.param("w_min", w_min_, -1.0);
-  private_nh_.param("vx_ref", vx_ref_, 0.3);
-  private_nh_.param("vy_ref", vy_ref_, 0.3);
+  private_nh_.param("vx_ref", vx_ref_, 0.1);
+  private_nh_.param("vy_ref", vy_ref_, 0.1);
   private_nh_.param("w_ref", w_ref_, 0.0);
   private_nh_.param("resolution", resolution_, 0.05);
   private_nh_.param("path_weight", path_weight_, 1.0);
@@ -52,34 +52,6 @@ BrusheeMppiPathTracker::~BrusheeMppiPathTracker()
 
 void BrusheeMppiPathTracker::path_callback(const geometry_msgs::PoseArray::ConstPtr& msg)
 {
-  // frame_id: base_link
-  // try
-  // {
-  //   geometry_msgs::TransformStamped transform = tf_Buffer_.lookupTransform("base_link", "map", ros::Time(0));
-  //   geometry_msgs::PoseArray transformed_path;
-  //   transformed_path.header = msg->header;
-  //   transformed_path.header.frame_id = "base_link";
-
-  //   for (const auto& pose : msg->poses)
-  //   {
-  //     geometry_msgs::PoseStamped pose_stamped;
-  //     pose_stamped.header = msg->header;
-  //     pose_stamped.pose = pose;
-  //     geometry_msgs::PoseStamped transformed_pose_stamped;
-  //     tf2::doTransform(pose_stamped, transformed_pose_stamped, transform);
-  //     transformed_path.poses.push_back(transformed_pose_stamped.pose);
-  //   }
-  //   path_ = transformed_path;
-  //   is_path_ = true;
-  //   path_pub_.publish(path_);
-  // }
-  // catch (const tf2::TransformException& ex)
-  // {
-  //   ROS_WARN("%s", ex.what());
-  //   return;
-  // }
-
-  //  frame_id: map
   path_ = *msg;
   is_path_ = true;
 }
@@ -158,11 +130,6 @@ void BrusheeMppiPathTracker::predict_states()  // サンプリングした制御
     samples_[i].y_[0] = robot_pose_.pose.pose.position.y;
     samples_[i].yaw_[0] = tf::getYaw(robot_pose_.pose.pose.orientation);
 
-    // path が base_link に変換されている場合
-    // samples_[i].x_[0] = 0.0;
-    // samples_[i].y_[0] = 0.0;
-    // samples_[i].yaw_[0] = 0.0;
-
     for (int t=0; t<horizon_-1; t++)
       predict_next_states(samples_[i], t);
   }
@@ -175,14 +142,6 @@ void BrusheeMppiPathTracker::predict_next_states(RobotStates &state, int t)
   state.x_[t+1] = state.x_[t] + dt_ * (state.vx_[t] * cos(state.yaw_[t]) - state.vy_[t] * sin(state.yaw_[t]));
   state.y_[t+1] = state.y_[t] + dt_ * (state.vx_[t] * sin(state.yaw_[t]) + state.vy_[t] * cos(state.yaw_[t]));
   state.yaw_[t+1] = state.yaw_[t] + dt_ * state.w_[t];
-
-  // state.x_[t+1] = state.x_[t] + dt_ * (state.vx_[t] * cos(state.yaw_[0]) - state.vy_[t] * sin(state.yaw_[0]));
-  // state.y_[t+1] = state.y_[t] + dt_ * (state.vx_[t] * sin(state.yaw_[0]) + state.vy_[t] * cos(state.yaw_[0]));
-
-  // path_ が base_link 　の場合
-  // state.x_[t+1] = state.x_[t] + dt_ * state.vx_[t];
-  // state.y_[t+1] = state.y_[t] + dt_ * state.vy_[t];
-  // state.yaw_[t+1] = state.yaw_[t] + dt_ * state.w_[t];
 }
 
 void BrusheeMppiPathTracker::publish_candidate_path()
@@ -342,7 +301,6 @@ void BrusheeMppiPathTracker::determine_optimal_solution()
     }
   }
   ROS_INFO_STREAM_THROTTLE(1.0, "vx: " << optimal_solution_.vx_[0] << ", vy: " << optimal_solution_.vy_[0] << ", w: " << optimal_solution_.w_[0]);
-  // ROS_INFO_STREAM_THROTTLE(1.0, "vx: " << optimal_solution_.vx_[0] << ", vy: " << optimal_solution_.vy_[0]);
   publish_optimal_path();
 }
 
