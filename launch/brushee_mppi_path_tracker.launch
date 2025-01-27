@@ -7,5 +7,6 @@
     <param name="vel_weight" value="1.0"/>
     <param name="path_weight" value="2.0"/>
     <param name="angle_weight" value="1.0"/>
+    <param name="vx_ref" value="0.1"/>
   </node> 
 </launch>

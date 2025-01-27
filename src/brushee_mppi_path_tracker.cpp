@@ -176,6 +176,9 @@ void BrusheeMppiPathTracker::predict_next_states(RobotStates &state, int t)
   state.y_[t+1] = state.y_[t] + dt_ * (state.vx_[t] * sin(state.yaw_[t]) + state.vy_[t] * cos(state.yaw_[t]));
   state.yaw_[t+1] = state.yaw_[t] + dt_ * state.w_[t];
 
+  // state.x_[t+1] = state.x_[t] + dt_ * (state.vx_[t] * cos(state.yaw_[0]) - state.vy_[t] * sin(state.yaw_[0]));
+  // state.y_[t+1] = state.y_[t] + dt_ * (state.vx_[t] * sin(state.yaw_[0]) + state.vy_[t] * cos(state.yaw_[0]));
+
   // path_ が base_link 　の場合
   // state.x_[t+1] = state.x_[t] + dt_ * state.vx_[t];
   // state.y_[t+1] = state.y_[t] + dt_ * state.vy_[t];
@@ -290,10 +293,10 @@ double BrusheeMppiPathTracker::calc_cost(RobotStates& state)
   {
     double dist = calc_min_dist(state, x_ref_, y_ref_);
     double angle_dist = calc_min_angle_dist(state, yaw_ref_);
-    double vx_cost = pow(state.vx_[t] - vx_ref_, 2);
-    double vy_cost = pow(state.vy_[t] - vy_ref_, 2);
+    double v_cost = pow(sqrt(pow(state.vx_[t], 2) + pow(state.vy_[t], 2)) - vx_ref_, 2);
     double w_cost = pow(state.w_[t] - w_ref_, 2);
-    cost += path_weight_ * dist + vel_weight_ * (vx_cost + vy_cost + w_cost) + angle_weight_ * angle_dist;
+    cost += path_weight_ * dist + vel_weight_ * (v_cost + w_cost) + angle_weight_ * angle_dist;
+    // cost += path_weight_ * dist + vel_weight_ * v_cost;
   }
   return cost;
 }
@@ -339,6 +342,7 @@ void BrusheeMppiPathTracker::determine_optimal_solution()
     }
   }
   ROS_INFO_STREAM_THROTTLE(1.0, "vx: " << optimal_solution_.vx_[0] << ", vy: " << optimal_solution_.vy_[0] << ", w: " << optimal_solution_.w_[0]);
+  // ROS_INFO_STREAM_THROTTLE(1.0, "vx: " << optimal_solution_.vx_[0] << ", vy: " << optimal_solution_.vy_[0]);
   publish_optimal_path();
 }
 
@@ -366,5 +370,6 @@ void BrusheeMppiPathTracker::publish()
   cmd_vel.linear.x = optimal_solution_.vx_[0];
   cmd_vel.linear.y = optimal_solution_.vy_[0];
   cmd_vel.angular.z = optimal_solution_.w_[0];
+  // cmd_vel.angular.z = 0.0;
   cmd_vel_pub_.publish(cmd_vel);
 }
