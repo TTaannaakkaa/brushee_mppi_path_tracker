@@ -5,7 +5,7 @@
   <include file="$(find brushee_description)/launch/mecanum_with_dkan.launch"/>
   <include file="$(find brushee_navigator)/launch/amcl.launch"/>
   <include file="$(find global_local_path_planner)/launch/a_star_rviz.launch"/>
-  <include file="$(find brushee_mppi_path_tracker)/launch/brushee_mppi_path_tracker.launch"/>
+  <!-- <include file="$(find brushee_mppi_path_tracker)/launch/brushee_mppi_path_tracker.launch"/> -->
 
   <node pkg="rviz" type="rviz" name="rviz" args="-d $(arg rviz_config)"/>
 </launch>

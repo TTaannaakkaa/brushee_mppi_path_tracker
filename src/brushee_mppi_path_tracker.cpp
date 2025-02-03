@@ -46,6 +46,7 @@ BrusheeMppiPathTracker::BrusheeMppiPathTracker() : private_nh_("~")
 
   path_sub_ = nh_.subscribe("/correct_footprints_yaw", 1, &BrusheeMppiPathTracker::path_callback, this);
   robot_pose_sub_ = nh_.subscribe("/amcl_pose", 1, &BrusheeMppiPathTracker::robot_pose_callback, this);
+  integrated_pose_sub_ = nh_.subscribe("/integrated_pose", 1, &BrusheeMppiPathTracker::integrated_pose_callback, this);
   cmd_vel_pub_ = nh_.advertise<geometry_msgs::Twist>("/brushee/cmd_vel", 1);
   //  for debug
   path_pub_ = nh_.advertise<geometry_msgs::PoseArray>("/brushee/mppi/path", 1);
@@ -83,6 +84,13 @@ void BrusheeMppiPathTracker::path_callback(const geometry_msgs::PoseArray::Const
 void BrusheeMppiPathTracker::robot_pose_callback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg)
 {
   robot_pose_ = *msg;
+  is_first_ = true;
+  is_robot_pose_ = true;
+}
+
+void BrusheeMppiPathTracker::integrated_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& msg)
+{
+  integrated_pose_ = *msg;
   is_first_ = true;
   is_robot_pose_ = true;
 }
@@ -163,9 +171,9 @@ void BrusheeMppiPathTracker::predict_states()  // サンプリングした制御
   for (int i=0; i<num_samples_; i++)
   {
     // path が map のままの場合
-    samples_[i].x_[0] = robot_pose_.pose.pose.position.x;
-    samples_[i].y_[0] = robot_pose_.pose.pose.position.y;
-    samples_[i].yaw_[0] = tf::getYaw(robot_pose_.pose.pose.orientation);
+    samples_[i].x_[0] = integrated_pose_.pose.position.x;
+    samples_[i].y_[0] = integrated_pose_.pose.position.y;
+    samples_[i].yaw_[0] = tf::getYaw(integrated_pose_.pose.orientation);
 
     for (int t=0; t<horizon_-1; t++)
       predict_next_states(samples_[i], t);
@@ -268,7 +276,7 @@ int BrusheeMppiPathTracker::get_current_index()
   double min_dist = DBL_MAX;
   for (int i=0; i<path_.poses.size()-1; i++)
   {
-    double dist = sqrt(pow(robot_pose_.pose.pose.position.x - path_.poses[i].position.x, 2) + pow(robot_pose_.pose.pose.position.y - path_.poses[i].position.y, 2));
+    double dist = sqrt(pow(integrated_pose_.pose.position.x - path_.poses[i].position.x, 2) + pow(integrated_pose_.pose.position.y - path_.poses[i].position.y, 2));
     if (dist < min_dist)
     {
       min_dist = dist;
@@ -365,9 +373,10 @@ void BrusheeMppiPathTracker::publish_optimal_path()
   optimal_path_msg_.header.frame_id = "map";
   optimal_path_msg_.header.stamp = ros::Time::now();
   optimal_path_msg_.poses.resize(horizon_-1);
-  optimal_solution_.x_[0] = robot_pose_.pose.pose.position.x;
-  optimal_solution_.y_[0] = robot_pose_.pose.pose.position.y;
-  optimal_solution_.yaw_[0] = tf::getYaw(robot_pose_.pose.pose.orientation);
+  optimal_solution_.x_[0] = integrated_pose_.pose.position.x;
+  optimal_solution_.y_[0] = integrated_pose_.pose.position.y;
+  optimal_solution_.yaw_[0] = tf::getYaw(integrated_pose_.pose.orientation);
+
   for (int t=0; t<horizon_-1; t++)
   {
     predict_next_states(optimal_solution_, t);

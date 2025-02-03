@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 project(brushee_mppi_path_tracker)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++17)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -124,12 +124,15 @@ add_library(${PROJECT_NAME} src/brushee_mppi_path_tracker.cpp)
 
 ## Declare a C++ executable
 add_executable(${PROJECT_NAME}_node src/brushee_mppi_path_tracker_node.cpp)
+add_executable(odom_integrator src/odom_integrator.cpp)
 
 ## Add cmake target dependencies of the executable
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(odom_integrator ${odom_integrator_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}_node ${PROJECT_NAME} ${catkin_LIBRARIES})
+target_link_libraries(odom_integrator ${catkin_LIBRARIES})
 
 #############
 ## Testing ##
