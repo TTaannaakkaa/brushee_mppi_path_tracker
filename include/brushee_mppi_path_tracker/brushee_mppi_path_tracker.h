@@ -80,6 +80,7 @@ class BrusheeMppiPathTracker
     int current_index_;
     int hz_;
     int num_samples_;
+    int pub_idx_;
     double control_noise_;
     double vx_max_, vy_max_, w_max_;
     double vx_min_, vy_min_, w_min_;
@@ -94,10 +95,12 @@ class BrusheeMppiPathTracker
 
     bool is_path_;
     bool is_robot_pose_;
+    bool is_first_;
 
     std::vector<double> x_ref_, y_ref_, yaw_ref_;
     std::vector<RobotStates> samples_;
     std::vector<double> weights_;
+    std::vector<double> pre_vx_;
 
     RobotStates optimal_solution_;
     geometry_msgs::PoseArray path_;
