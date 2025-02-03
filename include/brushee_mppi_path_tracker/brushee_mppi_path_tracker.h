@@ -62,6 +62,7 @@ class BrusheeMppiPathTracker
   private:
     void path_callback(const geometry_msgs::PoseArray::ConstPtr& msg);
     void robot_pose_callback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg);
+    void integrated_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& msg);
     void sampling();
     void clamp(double& value, double min, double max);
     void predict_states();
@@ -107,8 +108,7 @@ class BrusheeMppiPathTracker
     geometry_msgs::PoseArray path_;
     geometry_msgs::PoseWithCovarianceStamped robot_pose_;
     geometry_msgs::Twist cmd_vel_;
-    // tf2_ros::Buffer tf_Buffer_;
-    // tf2_ros::TransformListener tflistener_{tf_Buffer_};
+    geometry_msgs::PoseStamped integrated_pose_;
 
     //  for debug
     void publish_path();
@@ -130,6 +130,7 @@ class BrusheeMppiPathTracker
     ros::NodeHandle private_nh_;
     ros::Subscriber path_sub_;
     ros::Subscriber robot_pose_sub_;
+    ros::Subscriber integrated_pose_sub_;
     ros::Publisher cmd_vel_pub_;
 
 };
