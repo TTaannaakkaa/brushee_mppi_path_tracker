@@ -105,6 +105,7 @@ void BrusheeMppiPathTracker::process()
         ROS_INFO_STREAM_THROTTLE(1.0, "dt: " << dt_);
         if (is_robot_pose_)
         {
+          calc_ref_path();
           sampling();  //  TODO 自己位置推定の遅れを考慮する（optimal_path の次を用いるとか？）
           predict_states();
           calc_weights();
@@ -173,6 +174,7 @@ void BrusheeMppiPathTracker::predict_states()  // サンプリングした制御
 
 void BrusheeMppiPathTracker::predict_next_states(RobotStates &state, int t)
 {
+  // ROS_INFO_STREAM("predict_next_states");
   // 旋回あり
   // state.x_[t+1] = state.x_[t] + dt_ * (state.vx_[t] * cos(state.yaw_[t]) - state.vy_[t] * sin(state.yaw_[t]));
   // state.y_[t+1] = state.y_[t] + dt_ * (state.vx_[t] * sin(state.yaw_[t]) + state.vy_[t] * cos(state.yaw_[t]));
@@ -219,7 +221,6 @@ void BrusheeMppiPathTracker::publish_candidate_path()
 
 void BrusheeMppiPathTracker::calc_weights()
 {
-  calc_ref_path();
   double sum = 0.0;
   for (int i=0; i<num_samples_; i++)
   {
@@ -233,6 +234,8 @@ void BrusheeMppiPathTracker::calc_weights()
 
 void BrusheeMppiPathTracker::calc_ref_path() // 参照経路を計算
 {
+  int count = 0;
+  horizon_ = 20;
   current_index_ = get_current_index();
   double step = vx_ref_ * dt_ / resolution_;
   for (int i=0; i<horizon_; i++)
@@ -249,8 +252,11 @@ void BrusheeMppiPathTracker::calc_ref_path() // 参照経路を計算
       x_ref_[i] = path_.poses.back().position.x;
       y_ref_[i] = path_.poses.back().position.y;
       yaw_ref_[i] = tf::getYaw(path_.poses.back().orientation);
+      count++;
     }
   }
+  horizon_ -= count;
+  ROS_INFO_STREAM("horizon: " << horizon_);
   publish_ref_path();
 }
 
