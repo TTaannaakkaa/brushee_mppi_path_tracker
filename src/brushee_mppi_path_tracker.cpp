@@ -22,6 +22,7 @@ BrusheeMppiPathTracker::BrusheeMppiPathTracker() : private_nh_("~")
   private_nh_.param("path_weight", path_weight_, 1.0);
   private_nh_.param("vel_weight", vel_weight_, 1.0);
   private_nh_.param("angle_weight", angle_weight_, 1.0);
+  private_nh_.param("is_angler", is_angler_, false);
 
   ROS_INFO_STREAM("hz: " << hz_);
   ROS_INFO_STREAM("horizon: " << horizon_);
@@ -175,17 +176,19 @@ void BrusheeMppiPathTracker::predict_states()  // サンプリングした制御
 void BrusheeMppiPathTracker::predict_next_states(RobotStates &state, int t)
 {
   // ROS_INFO_STREAM("predict_next_states");
-  // 旋回あり
-  // state.x_[t+1] = state.x_[t] + dt_ * (state.vx_[t] * cos(state.yaw_[t]) - state.vy_[t] * sin(state.yaw_[t]));
-  // state.y_[t+1] = state.y_[t] + dt_ * (state.vx_[t] * sin(state.yaw_[t]) + state.vy_[t] * cos(state.yaw_[t]));
-  // state.yaw_[t+1] = state.yaw_[t] + dt_ * state.w_[t];
-
-  // 旋回なし
-  state.x_[t+1] = state.x_[t] + dt_ * (state.vx_[t] * cos(state.yaw_[0]) - state.vy_[t] * sin(state.yaw_[0]));
-  state.y_[t+1] = state.y_[t] + dt_ * (state.vx_[t] * sin(state.yaw_[0]) + state.vy_[t] * cos(state.yaw_[0]));
-
-  // state.x_[t+1] = state.x_[t] + dt_ * (state.vx_[t] * sin(state.yaw_[0]) - state.vy_[t] * cos(state.yaw_[0]));
-  // state.y_[t+1] = state.y_[t] + dt_ * (state.vx_[t] * cos(state.yaw_[0]) + state.vy_[t] * sin(state.yaw_[0]));
+  if (is_angler_)
+  {
+    // 旋回あり
+    state.x_[t+1] = state.x_[t] + dt_ * (state.vx_[t] * cos(state.yaw_[t]) - state.vy_[t] * sin(state.yaw_[t]));
+    state.y_[t+1] = state.y_[t] + dt_ * (state.vx_[t] * sin(state.yaw_[t]) + state.vy_[t] * cos(state.yaw_[t]));
+    state.yaw_[t+1] = state.yaw_[t] + dt_ * state.w_[t];
+  }
+  else
+  {
+    // 旋回なし
+    state.x_[t+1] = state.x_[t] + dt_ * (state.vx_[t] * cos(state.yaw_[0]) - state.vy_[t] * sin(state.yaw_[0]));
+    state.y_[t+1] = state.y_[t] + dt_ * (state.vx_[t] * sin(state.yaw_[0]) + state.vy_[t] * cos(state.yaw_[0]));
+  }
 }
 
 void BrusheeMppiPathTracker::publish_candidate_path()
@@ -256,7 +259,6 @@ void BrusheeMppiPathTracker::calc_ref_path() // 参照経路を計算
     }
   }
   horizon_ -= count;
-  ROS_INFO_STREAM("horizon: " << horizon_);
   publish_ref_path();
 }
 
@@ -301,10 +303,16 @@ double BrusheeMppiPathTracker::calc_cost(RobotStates& state)
     double angle_dist = calc_min_angle_dist(state, yaw_ref_);
     double v_cost = abs(sqrt(pow(state.vx_[t], 2) + pow(state.vy_[t], 2)) - vx_ref_);
     double w_cost = pow(state.w_[t] - w_ref_, 2);
-    //  旋回あり
-    // cost += path_weight_ * dist + vel_weight_ * (v_cost + w_cost) + angle_weight_ * angle_dist;
-    //  旋回なし
-    cost += path_weight_ * dist + vel_weight_ * v_cost;
+    if (is_angler_)
+    {
+      //  旋回あり
+      cost += path_weight_ * dist + vel_weight_ * (v_cost + w_cost) + angle_weight_ * angle_dist;
+    }
+    else
+    {
+      //  旋回なし
+      cost += path_weight_ * dist + vel_weight_ * v_cost;
+    }
   }
   return cost;
 }
@@ -375,10 +383,16 @@ void BrusheeMppiPathTracker::publish()
   geometry_msgs::Twist cmd_vel;
   cmd_vel.linear.x = optimal_solution_.vx_[pub_idx_];
   cmd_vel.linear.y = optimal_solution_.vy_[pub_idx_];
-  // 旋回あり
-  // cmd_vel.angular.z = optimal_solution_.w_[pub_idx_];
-  // 旋回なし
-  cmd_vel.angular.z = 0.0;
+  if (is_angler_)
+  {
+    // 旋回あり
+    cmd_vel.angular.z = optimal_solution_.w_[pub_idx_];
+  }
+  else
+  {
+    // 旋回なし
+    cmd_vel.angular.z = 0.0;
+  }
   ROS_INFO_STREAM_THROTTLE(1.0, "vx: " << cmd_vel.linear.x << ", vy: " << cmd_vel.linear.y << ", v: " << sqrt(pow(cmd_vel.linear.x, 2) + pow(cmd_vel.linear.y, 2)));
   cmd_vel_pub_.publish(cmd_vel);
 }

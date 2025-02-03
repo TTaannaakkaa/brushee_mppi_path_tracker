@@ -96,6 +96,7 @@ class BrusheeMppiPathTracker
     bool is_path_;
     bool is_robot_pose_;
     bool is_first_;
+    bool is_angler_;
 
     std::vector<double> x_ref_, y_ref_, yaw_ref_;
     std::vector<RobotStates> samples_;
