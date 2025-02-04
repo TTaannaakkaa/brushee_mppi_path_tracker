@@ -66,6 +66,7 @@ BrusheeMppiPathTracker::BrusheeMppiPathTracker() : private_nh_("~")
 
   last_time_ = ros::Time(0);
   pub_idx_ = 0;
+  coeff_ = 0.5;
   is_path_ = false;
   is_robot_pose_ = false;
   is_first_ = false;
@@ -90,9 +91,7 @@ void BrusheeMppiPathTracker::robot_pose_callback(const geometry_msgs::PoseWithCo
 
 void BrusheeMppiPathTracker::integrated_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
-  integrated_pose_ = *msg;
-  is_first_ = true;
-  is_robot_pose_ = true;
+  integrated_pose_ = *msg; is_first_ = true; is_robot_pose_ = true;
 }
 
 void BrusheeMppiPathTracker::process()
@@ -307,10 +306,11 @@ double BrusheeMppiPathTracker::calc_cost(RobotStates& state)
   double cost = 0.0;
   for (int t=0; t<horizon_; t++)
   {
-    double dist = calc_min_dist(state, x_ref_, y_ref_);
+    // double dist = calc_min_dist(state, x_ref_, y_ref_);
+    double dist = sqrt(pow(state.x_[t] - x_ref_[t], 2) + pow(state.y_[t] - y_ref_[t], 2));
     double angle_dist = calc_min_angle_dist(state, yaw_ref_);
     double v_cost = abs(sqrt(pow(state.vx_[t], 2) + pow(state.vy_[t], 2)) - vx_ref_);
-    double w_cost = pow(state.w_[t] - w_ref_, 2);
+    double w_cost = abs(state.w_[t] - w_ref_);
     if (is_angler_)
     {
       //  旋回あり
@@ -390,18 +390,19 @@ void BrusheeMppiPathTracker::publish_optimal_path()
 void BrusheeMppiPathTracker::publish()
 {
   geometry_msgs::Twist cmd_vel;
-  cmd_vel.linear.x = optimal_solution_.vx_[pub_idx_];
-  cmd_vel.linear.y = optimal_solution_.vy_[pub_idx_];
+  cmd_vel.linear.x = coeff_ * optimal_solution_.vx_[pub_idx_] + (1.0 - coeff_) * last_cmd_vel_.linear.x;
+  cmd_vel.linear.y = coeff_ * optimal_solution_.vy_[pub_idx_] + (1.0 - coeff_) * last_cmd_vel_.linear.y;
   if (is_angler_)
   {
     // 旋回あり
-    cmd_vel.angular.z = optimal_solution_.w_[pub_idx_];
+    cmd_vel.angular.z = coeff_ * optimal_solution_.w_[pub_idx_] + (1.0 - coeff_) * last_cmd_vel_.angular.z;
   }
   else
   {
     // 旋回なし
     cmd_vel.angular.z = 0.0;
   }
+  last_cmd_vel_ = cmd_vel;
   ROS_INFO_STREAM_THROTTLE(1.0, "vx: " << cmd_vel.linear.x << ", vy: " << cmd_vel.linear.y << ", v: " << sqrt(pow(cmd_vel.linear.x, 2) + pow(cmd_vel.linear.y, 2)));
   cmd_vel_pub_.publish(cmd_vel);
 }

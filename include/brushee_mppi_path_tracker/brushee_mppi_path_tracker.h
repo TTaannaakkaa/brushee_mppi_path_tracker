@@ -93,6 +93,7 @@ class BrusheeMppiPathTracker
     double current_time_;
     double dt_;
     double resolution_;
+    double coeff_;
 
     bool is_path_;
     bool is_robot_pose_;
@@ -108,6 +109,7 @@ class BrusheeMppiPathTracker
     geometry_msgs::PoseArray path_;
     geometry_msgs::PoseWithCovarianceStamped robot_pose_;
     geometry_msgs::Twist cmd_vel_;
+    geometry_msgs::Twist last_cmd_vel_;
     geometry_msgs::PoseStamped integrated_pose_;
 
     //  for debug
