@@ -308,7 +308,10 @@ double BrusheeMppiPathTracker::calc_cost(RobotStates& state)
   {
     // double dist = calc_min_dist(state, x_ref_, y_ref_);
     double dist = sqrt(pow(state.x_[t] - x_ref_[t], 2) + pow(state.y_[t] - y_ref_[t], 2));
-    double angle_dist = calc_min_angle_dist(state, yaw_ref_);
+    // double angle_dist = calc_min_angle_dist(state, yaw_ref_);
+    double angle_dist = fabs(state.yaw_[t] - yaw_ref_[t]);
+    if (angle_dist > M_PI)
+      angle_dist = 2 * M_PI - angle_dist;
     double v_cost = abs(sqrt(pow(state.vx_[t], 2) + pow(state.vy_[t], 2)) - vx_ref_);
     double w_cost = abs(state.w_[t] - w_ref_);
     if (is_angler_)
