@@ -43,9 +43,9 @@ private:
     else if (last_odom_.has_value())
     {
       const double dt = (msg->header.stamp - last_odom_->header.stamp).toSec();
+      yaw_ += msg->twist.twist.angular.z * dt;
       integrated_pose_.pose.position.x += msg->twist.twist.linear.x * cos(yaw_) * dt - msg->twist.twist.linear.y * sin(yaw_) * dt;
       integrated_pose_.pose.position.y += msg->twist.twist.linear.x * sin(yaw_) * dt + msg->twist.twist.linear.y * cos(yaw_) * dt;
-      yaw_ += msg->twist.twist.angular.z * dt;
       publish_integrated_pose(msg->header.stamp);
     }
     last_odom_ = *msg;
